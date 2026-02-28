@@ -31,6 +31,7 @@ function App() {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [showAdminSubmenu, setShowAdminSubmenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // <--- Control móvil
+  const [estaBuscando, setEstaBuscando] = useState(false); // <--- Nuevo estado para el cargando
 
   const [modoRegistro, setModoRegistro] = useState(false);
   const [mensajeCliente, setMensajeCliente] = useState('');
@@ -105,6 +106,7 @@ function App() {
 
   const buscarCliente = async (e) => {
     e.preventDefault();
+    setEstaBuscando(true); // Inicia el efecto de carga
     const cedulaCompleta = `${tipoDocumento}${datosNuevoCliente.cedula}`;
     try {
       const res = await fetch(`${API_BASE_URL}/api/clientes/cedula/${cedulaCompleta}`);
@@ -116,7 +118,12 @@ function App() {
         setModoRegistro(true);
         setMensajeCliente('Cliente no registrado.');
       }
-    } catch (error) { console.error("Error de red"); }
+    } catch (error) { 
+      console.error("Error de red"); 
+      alert("Error de conexión. El servidor está despertando..."); //
+    } finally {
+      setEstaBuscando(false); // Finaliza el efecto de carga siempre, falle o gane
+    }
   };
 
   const registrarCliente = async (e) => {
@@ -349,8 +356,21 @@ function App() {
                       <input required type="text" placeholder="Cédula" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" value={datosNuevoCliente.cedula} onChange={e => { setDatosNuevoCliente({ ...datosNuevoCliente, cedula: e.target.value.replace(/\D/g, '') }); setModoRegistro(false); }} />
                     </div>
                     {modoRegistro && (<div className="space-y-4 animate-in zoom-in"><input required type="text" placeholder="Nombre" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" value={datosNuevoCliente.nombre} onChange={e => setDatosNuevoCliente({...datosNuevoCliente, nombre: e.target.value})} /><input type="text" placeholder="Teléfono" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" value={datosNuevoCliente.telefono} onChange={e => setDatosNuevoCliente({...datosNuevoCliente, telefono: e.target.value})} /></div>)}
-                    <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black text-base hover:bg-orange-700 shadow-lg transition-all active:scale-95">{modoRegistro ? 'REGISTRAR Y VENDER' : 'BUSCAR CLIENTE'}</button>
-                  </form>
+                      <button 
+                        type="submit" 
+                        disabled={estaBuscando} // Desactiva el botón mientras busca
+                        className={`w-full py-4 rounded-2xl font-black text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 ${estaBuscando ? 'bg-orange-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
+                      >
+                        {estaBuscando ? (
+                          <>
+                            <div className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                            BUSCANDO CLIENTE...
+                          </>
+                        ) : (
+                          modoRegistro ? 'REGISTRAR Y VENDER' : 'BUSCAR CLIENTE'
+                        )}
+                      </button>
+                    </form>
                 </div>
               ) : (
                 <div className="space-y-4">
