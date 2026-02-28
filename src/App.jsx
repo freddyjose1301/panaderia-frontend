@@ -212,23 +212,56 @@ function App() {
   const quitarDelCarrito = (id) => setCarrito(carrito.filter(item => item.id !== id));
 
   const generarPDFSemanal = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/reportes/detalle-semanal`);
-      const ventas = await res.json();
-      const doc = new jsPDF();
-      doc.setFontSize(20); doc.setTextColor(249, 115, 22);
-      doc.text("PANADERÍA STREEL", 105, 20, { align: "center" });
-      const tablaData = ventas.map((v) => [
-        new Date(v.fecha).toLocaleDateString(),
-        v.cliente?.nombre || "General",
-        v.detalles.map(d => `${d.producto?.nombre} (x${d.cantidad})`).join(", "),
-        v.metodoPago || "Efectivo",
-        `$${(v.total || 0).toFixed(2)}`
-      ]);
-      autoTable(doc, { startY: 40, head: [['Fecha', 'Cliente', 'Productos', 'Pago', 'Monto']], body: tablaData, headStyles: { fillColor: [249, 115, 22] } });
-      doc.save(`Reporte_Semanal.pdf`);
-    } catch (error) { alert("Error al generar PDF"); }
-  };
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/reportes/detalle-semanal`);
+        const ventas = await res.json();
+        
+        const doc = new jsPDF();
+        
+        // 1. Título y Encabezado (Igual a tu referencia)
+        doc.setFontSize(22);
+        doc.setTextColor(249, 115, 22); // Color Naranja Streel
+        doc.setFont("helvetica", "bold");
+        doc.text("PANADERÍA STREEL", 105, 20, { align: "center" }); // [cite: 1]
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text("Reporte de Ventas Semanales - Auditoría", 105, 28, { align: "center" }); // [cite: 2]
+
+        // 2. Cálculo del Total General
+        const totalGeneral = ventas.reduce((acc, v) => acc + (v.total || 0), 0); // 
+
+        // 3. Mapeo de datos (Reordenado según tu PDF de ejemplo)
+        const tablaData = ventas.map((v) => [
+          new Date(v.fecha).toLocaleDateString(), // Fecha
+          v.detalles.map(d => `${d.producto?.nombre} (x${d.cantidad})`).join(", "), // Productos 
+          v.cliente?.nombre || "General", // Cliente
+          v.metodoPago || "Efectivo", // Pago
+          `$${(v.total || 0).toFixed(2)}` // Monto
+        ]);
+
+        // 4. Generación de la Tabla
+        autoTable(doc, { 
+          startY: 40, 
+          head: [['Fecha', 'Productos', 'Cliente', 'Pago', 'Monto']], // 
+          body: tablaData, 
+          headStyles: { fillColor: [249, 115, 22] },
+          theme: 'striped'
+        });
+
+        // 5. Añadir el TOTAL al final de la tabla
+        const finalY = doc.lastAutoTable.finalY; // Obtiene la posición donde terminó la tabla
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL SEMANA: $${totalGeneral.toFixed(2)}`, 195, finalY + 15, { align: "right" }); // 
+
+        doc.save(`Reporte_Semanal_Streel_${new Date().toLocaleDateString()}.pdf`);
+      } catch (error) { 
+        console.error(error);
+        alert("Error al generar PDF"); 
+      }
+    };
 
   useEffect(() => {
     if (isLoggedIn) {
