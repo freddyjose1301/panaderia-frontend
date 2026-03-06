@@ -277,7 +277,25 @@ function App() {
       }
     };
 
+    const obtenerTasaAutomatica = async () => {
+    try {
+      // Usamos una API gratuita y abierta (v6.exchangerate-api.com)
+      const respuesta = await fetch('https://open.er-api.com/v6/latest/USD');
+      const datos = await respuesta.json();
+      
+      if (datos && datos.rates && datos.rates.VES) {
+        const tasaOficial = datos.rates.VES;
+        // Solo actualizamos si la tasa tiene sentido (mayor a 0)
+        setTasaDolar(tasaOficial);
+        console.log("Tasa actualizada automáticamente: " + tasaOficial);
+      }
+    } catch (error) {
+      console.error("No se pudo conectar con la API de tasa, usando manual.");
+    }
+  };
+
   useEffect(() => {
+    obtenerTasaAutomatica();
     if (isLoggedIn) {
       if (activeTab === 'ventas' || activeTab === 'inventario') cargarProductos();
       if (activeTab === 'reportes') {
