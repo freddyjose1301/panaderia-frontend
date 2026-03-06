@@ -46,6 +46,13 @@ function App() {
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
   const [ventasDelDia, setVentasDelDia] = useState([]);
 
+  const [tasaDolar, setTasaDolar] = useState(60.00); // Tasa manual/inicial
+  const [mostrarConfigTasa, setMostrarConfigTasa] = useState(false); // Para ocultar el ajuste
+
+  // Pon esto justo antes del return del componente App
+  const totalUSD = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+  const totalBS = totalUSD * tasaDolar;
+
   // --- 2. FUNCIONES DE CARGA Y LOGICA ---
   const cargarEstadisticas = async () => {
     try {
@@ -332,6 +339,26 @@ function App() {
                 </div>
               )}
             </div>
+
+            {/* Panel de Tasa Rápida */}
+            <div className="bg-white p-4 rounded-2xl border border-orange-100 mb-6 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-2 rounded-lg text-orange-600"><TrendingUp size={20} /></div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase">Tasa del Día</p>
+                  <p className="font-bold text-gray-800">1 USD = {tasaDolar.toFixed(2)} Bs</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  const nuevaTasa = window.prompt("Nueva tasa en Bs:", tasaDolar);
+                  if (nuevaTasa) setTasaDolar(parseFloat(nuevaTasa));
+                }}
+                className="bg-gray-50 text-orange-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-orange-50 transition-colors"
+              >
+                CAMBIAR TASA
+              </button>
+            </div>
           </nav>
           <button onClick={() => setIsLoggedIn(false)} className="text-red-400 font-bold p-4 hover:bg-red-50 rounded-2xl transition-all">Cerrar Sesión</button>
         </aside>
@@ -404,9 +431,25 @@ function App() {
                         {metodoPago && metodoPago !== 'Efectivo' && (<div className="space-y-1 animate-in zoom-in"><label className="text-[9px] font-black text-orange-600 uppercase ml-1">Ref. (4 Díg)</label><input type="text" maxLength="4" placeholder="0000" className="w-full p-3 bg-white rounded-xl border-none shadow-sm font-bold text-xs" value={referencia} onChange={(e) => setReferencia(e.target.value.replace(/\D/g, ''))} /></div>)}
                         {metodoPago === 'Efectivo' && (<div className="space-y-1 animate-in zoom-in"><label className="text-[9px] font-black text-orange-600 uppercase ml-1">Moneda</label><div className="flex gap-1.5">{['Bs', '$', '€'].map(m => (<button key={m} onClick={() => setMoneda(m)} className={`flex-1 py-2 rounded-lg font-black text-[10px] ${moneda === m ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-orange-400'}`}>{m}</button>))}</div></div>)}
                       </div>
-                      <div className="flex flex-col items-end">
-                        <div className="mb-2 text-right"><span className="text-gray-400 font-black uppercase text-[10px] tracking-[4px]">Monto Neto</span><div className="text-3xl lg:text-4xl font-black text-gray-900 tracking-tighter">${carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0).toFixed(2)}</div></div>
-                        <button onClick={finalizarVenta} disabled={carrito.length === 0 || !metodoPago || (metodoPago === 'Efectivo' && !moneda) || (metodoPago !== 'Efectivo' && referencia.length < 4)} className="w-full lg:w-auto px-10 bg-orange-600 text-white py-4 rounded-2xl font-black text-base hover:bg-orange-700 shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3"><CheckCircle size={20}/> CONFIRMAR VENTA</button>
+                      <div className="flex flex-col items-end w-full">
+                        <div className="mb-4 text-right w-full border-b border-orange-100 pb-4">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-400 font-black uppercase text-[10px] tracking-[2px]">Monto en Bs (Tasa: {tasaDolar.toFixed(2)})</span>
+                            <span className="text-2xl font-black text-orange-600">Bs {totalBS.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400 font-black uppercase text-[10px] tracking-[4px]">Monto Neto USD</span>
+                            <span className="text-4xl font-black text-gray-900 tracking-tighter">${totalUSD.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={finalizarVenta} 
+                          disabled={carrito.length === 0 || !metodoPago || (metodoPago === 'Efectivo' && !moneda) || (metodoPago !== 'Efectivo' && referencia.length < 4)} 
+                          className="w-full lg:w-auto px-10 bg-orange-600 text-white py-4 rounded-2xl font-black text-base hover:bg-orange-700 shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3"
+                        >
+                          <CheckCircle size={20}/> CONFIRMAR VENTA
+                        </button>
                       </div>
                     </div>
                   </div>
