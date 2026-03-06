@@ -53,6 +53,37 @@ function App() {
   const totalUSD = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
   const totalBS = totalUSD * tasaDolar;
 
+  const [busquedaInventario, setBusquedaInventario] = useState(''); // Para el buscador
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Modal de edición
+  const [productoAEditar, setProductoAEditar] = useState(null); // Producto seleccionado
+
+  // --- FUNCIÓN PARA ELIMINAR ---
+  const eliminarProducto = async (id) => {
+    if (window.confirm("¿Estás seguro de eliminar este producto?")) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/productos/${id}`, { method: 'DELETE' });
+        if (res.ok) cargarProductos(); // Refresca la lista
+        else alert("No se pudo eliminar. Verifique si tiene ventas asociadas.");
+      } catch (error) { alert("Error de conexión"); }
+    }
+  };
+
+  // --- FUNCIÓN PARA ACTUALIZAR (EDITAR) ---
+  const actualizarProducto = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/productos/${productoAEditar.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productoAEditar)
+      });
+      if (res.ok) {
+        setIsEditModalOpen(false);
+        cargarProductos();
+      }
+    } catch (error) { alert("Error al actualizar"); }
+  };
+
   // --- 2. FUNCIONES DE CARGA Y LOGICA ---
   const cargarEstadisticas = async () => {
     try {
@@ -477,8 +508,48 @@ function App() {
           )}
 
           {activeTab === 'inventario' && (
-            <div className="bg-white rounded-[40px] shadow-sm border border-orange-100 p-6 lg:p-10 animate-in fade-in overflow-hidden">
-              <div className="overflow-x-auto"><table className="w-full min-w-[500px] text-left"><thead><tr className="text-gray-400 text-[10px] lg:text-xs uppercase font-bold tracking-[2px] border-b border-orange-50"><th className="pb-8">Nombre</th><th className="pb-8">Categoría</th><th className="pb-8">Precio</th></tr></thead><tbody className="divide-y divide-orange-50">{productos.map(p => (<tr key={p.id} className="hover:bg-orange-50/40 transition-colors"><td className="py-6 font-bold text-gray-700 text-sm lg:text-base">{p.nombre}</td><td className="py-6"><span className="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{p.categoria}</span></td><td className="py-6 text-gray-500 font-bold text-sm lg:text-base">${p.precio.toFixed(2)}</td></tr>))}</tbody></table></div>
+            <div className="space-y-6 animate-in fade-in">
+              {/* Barra de Búsqueda de Inventario */}
+              <div className="relative">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-orange-400"><Search size={20} /></div>
+                <input 
+                  type="text" 
+                  placeholder="Buscar en inventario (Nombre o Categoría)..." 
+                  className="w-full pl-14 pr-6 py-4 bg-white rounded-2xl shadow-sm border border-orange-100 font-bold"
+                  value={busquedaInventario}
+                  onChange={(e) => setBusquedaInventario(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-white rounded-[40px] shadow-sm border border-orange-100 p-6 lg:p-10 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[500px] text-left">
+                    <thead>
+                      <tr className="text-gray-400 text-[10px] lg:text-xs uppercase font-bold tracking-[2px] border-b border-orange-50">
+                        <th className="pb-8">Nombre</th>
+                        <th className="pb-8">Categoría</th>
+                        <th className="pb-8">Precio</th>
+                        <th className="pb-8 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-50">
+                      {productos
+                        .filter(p => p.nombre.toLowerCase().includes(busquedaInventario.toLowerCase()) || p.categoria.toLowerCase().includes(busquedaInventario.toLowerCase()))
+                        .map(p => (
+                        <tr key={p.id} className="hover:bg-orange-50/40 transition-colors group">
+                          <td className="py-6 font-bold text-gray-700 text-sm lg:text-base">{p.nombre}</td>
+                          <td className="py-6"><span className="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">{p.categoria}</span></td>
+                          <td className="py-6 text-gray-500 font-bold text-sm lg:text-base">${p.precio.toFixed(2)}</td>
+                          <td className="py-6 text-right space-x-2">
+                            <button onClick={() => { setProductoAEditar(p); setIsEditModalOpen(true); }} className="p-2 text-gray-400 hover:text-orange-500 transition-colors"><FileText size={18} /></button>
+                            <button onClick={() => eliminarProducto(p.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -556,6 +627,27 @@ function App() {
               <input required type="number" step="0.01" placeholder="Precio ($)" className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold text-sm" value={nuevoProducto.precio} onChange={(e) => setNuevoProducto({...nuevoProducto, precio: e.target.value})} />
               <select className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold text-gray-400 text-sm" value={nuevoProducto.categoria} onChange={(e) => setNuevoProducto({...nuevoProducto, categoria: e.target.value})}><option value="">Categoría...</option><option value="Salados">Salados</option><option value="Dulces">Dulces</option><option value="Temporada">Temporada</option></select>
               <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-orange-700 shadow-xl mt-6">Confirmar</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && productoAEditar && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-xl flex items-center justify-center p-4 z-[80]">
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-md shadow-2xl animate-in zoom-in">
+            <h3 className="text-2xl font-black text-gray-800 mb-8 text-center italic">Editar Producto</h3>
+            <form onSubmit={actualizarProducto} className="space-y-6">
+              <input required type="text" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold" value={productoAEditar.nombre} onChange={(e) => setProductoAEditar({...productoAEditar, nombre: e.target.value})} />
+              <input required type="number" step="0.01" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold" value={productoAEditar.precio} onChange={(e) => setProductoAEditar({...productoAEditar, precio: parseFloat(e.target.value)})} />
+              <select className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold" value={productoAEditar.categoria} onChange={(e) => setProductoAEditar({...productoAEditar, categoria: e.target.value})}>
+                <option value="Salados">Salados</option>
+                <option value="Dulces">Dulces</option>
+                <option value="Temporada">Temporada</option>
+              </select>
+              <div className="flex gap-4">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-4 font-bold text-gray-400">Cancelar</button>
+                <button type="submit" className="flex-1 bg-orange-600 text-white py-4 rounded-2xl font-black">Guardar</button>
+              </div>
             </form>
           </div>
         </div>
