@@ -308,25 +308,33 @@ function App() {
       }
     };
 
-    const obtenerTasaAutomatica = async () => {
+const obtenerTasaAutomatica = async () => {
     try {
-      // Usamos una API gratuita y abierta (v6.exchangerate-api.com)
-      const respuesta = await fetch('https://open.er-api.com/v6/latest/USD');
+      // Usamos la API específica para Venezuela
+      const respuesta = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
       const datos = await respuesta.json();
       
-      if (datos && datos.rates && datos.rates.VES) {
-        const tasaOficial = datos.rates.VES;
-        // Solo actualizamos si la tasa tiene sentido (mayor a 0)
-        setTasaDolar(tasaOficial);
-        console.log("Tasa actualizada automáticamente: " + tasaOficial);
+      console.log("Datos recibidos de DolarAPI:", datos);
+
+      // Esta API devuelve el valor en la propiedad 'promedio' o 'valor'
+      if (datos && datos.promedio && datos.promedio > 0) {
+        setTasaDolar(datos.promedio);
+        console.log("¡ÉXITO! Tasa actualizada: " + datos.promedio);
+      } else {
+        throw new Error("Dato inválido");
       }
     } catch (error) {
-      console.error("No se pudo conectar con la API de tasa, usando manual.");
+      console.error("Fallo la API regional, manteniendo tasa de seguridad (60.00)");
+      setTasaDolar(60.00); 
     }
   };
 
   useEffect(() => {
+    console.log("--- INICIANDO BUSQUEDA DE TASA ---");
     obtenerTasaAutomatica();
+  }, []);
+
+  useEffect(() => {
     if (isLoggedIn) {
       if (activeTab === 'ventas' || activeTab === 'inventario') cargarProductos();
       if (activeTab === 'reportes') {
